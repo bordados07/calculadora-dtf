@@ -3,6 +3,8 @@ import streamlit as st
 from PIL import Image
 import numpy as np
 import cv2
+from io import BytesIO
+from base64 import b64encode
 from streamlit_drawable_canvas import st_canvas
 
 st.set_page_config(page_title="Calculadora DTF", layout="centered")
@@ -29,12 +31,20 @@ if uploaded_file:
         st.image(image_np, caption="Fondo eliminado automáticamente", use_column_width=True)
 
     elif metodo == "Manual (clic en color)":
-        st.markdown("Haz clic en el color del fondo a eliminar:")
+        st.markdown("Haz clic en el color del fondo que deseas eliminar:")
+
+        # Convertir imagen a base64 para canvas
+        buffered = BytesIO()
+        image.save(buffered, format="PNG")
+        img_str = b64encode(buffered.getvalue()).decode()
+        data_url = f"data:image/png;base64,{img_str}"
+
         canvas_result = st_canvas(
             fill_color="rgba(255, 255, 255, 0.0)",
             stroke_width=1,
             stroke_color="black",
-            background_image=image,
+            background_image=None,
+            background_image_url=data_url,
             update_streamlit=True,
             height=image.height,
             width=image.width,
