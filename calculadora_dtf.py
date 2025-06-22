@@ -63,4 +63,4 @@ if uploaded_file:
 # Enlace alternativo para quitar fondo manual
 st.markdown("---")
 st.markdown("### ¿Duda con la eliminación de fondo?")
-st.markdown("[Haz clic aquí para quitar el fondo manualmente](https://www.iloveimg.com/es/descarga/hb7xpb7vddnAn713cd4mv7h6m5ptgx8nhszsAvdzlm88tycp5fds4pm7dgp28fh2jhwc3v0nbyx5d585lbA9std013vp5gktpncknl54w38nr7y2sc6gjdrA8b31wrbl9bm9gmtgs145A5A31fnll550m1dfdmz9Agdk9vjp2w9625nlkf5w17bwk9kn8slxgzAsjqmp8zr03/4g)", unsafe_allow_html=True)
+st.markdown("[Haz clic aquí para quitar el fondo manualmente](https://www.iloveimg.com/es/eliminar-fondo)", unsafe_allow_html=True)
