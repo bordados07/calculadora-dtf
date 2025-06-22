@@ -29,7 +29,7 @@ st.markdown(
 )
 
 st.markdown("<div class='title'>🎨 Calculadora de DTF</div>", unsafe_allow_html=True)
-st.markdown("<div class='subtitle'>Sube tu diseño y te diremos cuántos metros de DTF necesitas</div>", unsafe_allow_html=True)
+st.markdown("<div class='subtitle'>Sube tu diseño y te diremos cuántos metros y cuánto cuesta tu DTF</div>", unsafe_allow_html=True)
 
 uploaded_file = st.file_uploader("📤 Sube tu diseño (PNG, JPG)", type=["png", "jpg", "jpeg"])
 
@@ -71,6 +71,7 @@ if uploaded_file:
     st.markdown(f"📐 Tamaño con márgenes incluidos: **{width_cm} cm x {height_cm} cm**")
 
     cantidad = st.number_input("🧾 ¿Cuántos diseños necesitas?", min_value=1, value=10, step=1)
+    precio_metro = st.number_input("💸 Precio del metro de DTF (MXN)", min_value=1.0, value=80.0, step=1.0)
 
     # Área del rollo de DTF
     rollo_alto = 100.0  # cm
@@ -84,5 +85,10 @@ if uploaded_file:
         st.error("❌ El diseño es demasiado grande para caber en un metro de DTF.")
     else:
         metros_necesarios = round(cantidad / diseños_por_metro, 2)
+        precio_unitario = round(precio_metro / diseños_por_metro, 2)
+        costo_total = round(metros_necesarios * precio_metro, 2)
+
         st.success(f"📦 En 1 metro caben {diseños_por_metro} diseños ({diseños_x_fila} por fila, {filas_por_metro} filas)")
         st.info(f"🧮 Para {cantidad} diseños necesitas aproximadamente **{metros_necesarios} metros** de DTF.")
+        st.markdown(f"💲 **Precio por diseño:** ${precio_unitario} MXN")
+        st.markdown(f"💰 **Costo total del pedido:** ${costo_total} MXN")
