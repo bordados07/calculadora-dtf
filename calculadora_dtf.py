@@ -10,33 +10,42 @@ st.markdown(
     "<h1 style='text-align: center; color: white;'>Calculadora de Metros de DTF</h1>",
     unsafe_allow_html=True
 )
+st.markdown("<p style='text-align: center; color: gray;'>Sube tu diseño, elimina el fondo automáticamente y calcula el costo y metros de impresión en DTF.</p>", unsafe_allow_html=True)
 st.markdown("<hr>", unsafe_allow_html=True)
 
-uploaded_file = st.file_uploader("Sube tu imagen", type=["png", "jpg", "jpeg"])
+uploaded_file = st.file_uploader("📤 Sube tu imagen", type=["png", "jpg", "jpeg"])
 if uploaded_file:
     image = Image.open(uploaded_file).convert("RGBA")
-    image_np = np.array(image)
+    original_width, original_height = image.size
+    aspect_ratio = original_width / original_height
 
-    st.image(image, caption="Imagen original", use_column_width=True)
+    image_np = np.array(image)
+    st.image(image, caption="🖼️ Imagen original", use_column_width=True)
 
     # Eliminar fondo blanco automáticamente
     image_gray = cv2.cvtColor(image_np, cv2.COLOR_RGBA2GRAY)
     _, alpha = cv2.threshold(image_gray, 250, 255, cv2.THRESH_BINARY_INV)
     image_np[:, :, 3] = alpha
-    st.image(image_np, caption="Fondo eliminado automáticamente", use_column_width=True)
+    st.image(image_np, caption="🧽 Fondo eliminado automáticamente", use_column_width=True)
 
-    st.markdown("### Define las medidas del diseño")
-    col1, col2 = st.columns(2)
-    with col1:
+    st.markdown("### ✏️ Define una medida del diseño")
+    modo = st.radio("¿Qué medida deseas ingresar?", ["Ancho (cm)", "Alto (cm)"])
+
+    if modo == "Ancho (cm)":
         ancho_cm = st.number_input("Ancho (cm)", min_value=1.0, value=10.0)
-    with col2:
+        alto_cm = ancho_cm / aspect_ratio
+    else:
         alto_cm = st.number_input("Alto (cm)", min_value=1.0, value=10.0)
+        ancho_cm = alto_cm * aspect_ratio
 
+    st.markdown(f"📏 Medidas proporcionales del diseño: **{ancho_cm:.2f} cm x {alto_cm:.2f} cm**")
+
+    # Margen
     margen = 1
     ancho_total = ancho_cm + margen
     alto_total = alto_cm + margen
 
-    cantidad = st.number_input("¿Cuántos diseños necesitas?", min_value=1, step=1)
+    cantidad = st.number_input("🎨 ¿Cuántos diseños necesitas?", min_value=1, step=1)
 
     largo_dtf_cm = 58
     alto_dtf_cm = 100
@@ -49,18 +58,17 @@ if uploaded_file:
     else:
         metros_necesarios = 0
 
-    st.markdown(f"**Diseños por metro:** {total_por_metro}")
-    st.markdown(f"**Metros de DTF necesarios:** {metros_necesarios:.2f}")
+    st.markdown(f"🧾 **Diseños por metro:** {total_por_metro}")
+    st.markdown(f"📐 **Metros de DTF necesarios:** {metros_necesarios:.2f}")
 
-    st.markdown("### Costo del DTF")
+    st.markdown("### 💰 Costo del DTF")
     precio_metro = st.number_input("Precio por metro (MXN)", min_value=0.0, value=100.0)
     if metros_necesarios > 0:
         total = metros_necesarios * precio_metro
         precio_unitario = total / cantidad
-        st.success(f"Precio total: ${total:.2f} MXN")
-        st.info(f"Precio por diseño: ${precio_unitario:.2f} MXN")
+        st.success(f"💸 Precio total: ${total:.2f} MXN")
+        st.info(f"🧾 Precio por diseño: ${precio_unitario:.2f} MXN")
 
-# Enlace alternativo para quitar fondo manual
 st.markdown("---")
 st.markdown("### ¿Duda con la eliminación de fondo?")
 st.markdown("[Haz clic aquí para quitar el fondo manualmente](https://www.iloveimg.com/es/eliminar-fondo)", unsafe_allow_html=True)
