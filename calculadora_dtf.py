@@ -1,73 +1,70 @@
 
-import streamlit as st
-from PIL import Image, ImageOps
+from PIL import Image
 import numpy as np
-import cv2
-from io import BytesIO
-import base64
+import streamlit as st
+from streamlit_drawable_canvas import st_canvas
+import io
 
+# Configuración visual
 st.set_page_config(page_title="Calculadora DTF", layout="centered")
-st.markdown("""<h1 style='text-align: center; color: white;'>Calculadora de Metros de DTF</h1>""", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; color: white;'>Calculadora DTF</h1>", unsafe_allow_html=True)
+st.markdown("""
+    <style>
+        body {
+            background-color: #000000;
+            color: white;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
-modo = st.radio("Selecciona el método para eliminar el fondo:", ["Automático (IA)", "Manual (seleccionar color)"])
+# Subir imagen
+uploaded_file = st.file_uploader("Sube tu diseño en PNG (fondo blanco o de color):", type=["png", "jpg", "jpeg"])
 
-uploaded_file = st.file_uploader("Sube tu diseño", type=["png", "jpg", "jpeg"])
 if uploaded_file:
     image = Image.open(uploaded_file).convert("RGBA")
-    img_np = np.array(image)
+    np_image = np.array(image)
 
-    if modo == "Automático (IA)":
-        gray = cv2.cvtColor(img_np, cv2.COLOR_RGBA2GRAY)
-        _, mask = cv2.threshold(gray, 250, 255, cv2.THRESH_BINARY)
-        img_np[mask == 255] = (0, 0, 0, 0)
-    else:
-        st.write("Haz clic en el fondo que deseas eliminar (implementación simplificada)")
-        click_color = st.color_picker("Selecciona el color del fondo", "#FFFFFF")
-        click_rgb = tuple(int(click_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
-        lower = np.array([c - 20 for c in click_rgb])
-        upper = np.array([c + 20 for c in click_rgb])
-        mask = cv2.inRange(img_np[:, :, :3], lower, upper)
-        img_np[mask > 0] = (0, 0, 0, 0)
+    st.subheader("Selecciona el modo de eliminación de fondo")
+    modo = st.radio("Modo de eliminación de fondo", options=["Automático (blanco)", "Manual (clic sobre el fondo)"])
 
-    image_no_bg = Image.fromarray(img_np)
-    st.image(image_no_bg, caption="Diseño sin fondo", use_column_width=True)
+    if modo == "Manual (clic sobre el fondo)":
+        st.markdown("Haz clic en el fondo de la imagen para seleccionarlo y eliminarlo")
 
-    dimension = st.radio("¿Qué dimensión quieres ingresar?", ["Ancho (cm)", "Alto (cm)"])
-    user_size = st.number_input(f"Ingrese el {dimension.lower()} del diseño en cm", min_value=1.0)
+        canvas_result = st_canvas(
+            fill_color="rgba(255, 255, 255, 0.0)",
+            stroke_width=1,
+            stroke_color="rgba(255, 255, 255, 0.0)",
+            background_image=image,
+            update_streamlit=True,
+            height=image.height,
+            width=image.width,
+            drawing_mode="transform",
+            key="canvas"
+        )
 
-    width, height = image_no_bg.size
-    aspect_ratio = height / width
+        if canvas_result.json_data and canvas_result.image_data is not None:
+            if canvas_result.json_data["objects"]:
+                x = int(canvas_result.json_data["objects"][-1]["left"])
+                y = int(canvas_result.json_data["objects"][-1]["top"])
+                if 0 <= y < np_image.shape[0] and 0 <= x < np_image.shape[1]:
+                    pixel = np_image[y, x, :3]
+                    st.success(f"Color seleccionado: {pixel.tolist()}")
 
-    if dimension == "Ancho (cm)":
-        width_cm = user_size
-        height_cm = user_size * aspect_ratio
-    else:
-        height_cm = user_size
-        width_cm = user_size / aspect_ratio
+                    mask = np.all(np_image[:, :, :3] == pixel, axis=-1)
+                    np_image[mask] = [255, 255, 255, 0]
+                    image = Image.fromarray(np_image)
 
-    st.markdown(f"**Tamaño final del diseño (sin fondo, proporcional):** {width_cm:.2f}cm x {height_cm:.2f}cm")
+    elif modo == "Automático (blanco)":
+        st.info("Eliminando fondo blanco automáticamente...")
+        threshold = 240
+        r, g, b, a = np.rollaxis(np_image, axis=-1)
+        mask = (r > threshold) & (g > threshold) & (b > threshold)
+        np_image[mask] = [255, 255, 255, 0]
+        image = Image.fromarray(np_image)
 
-    # Agregar margen de separación de 1 cm
-    width_cm += 1
-    height_cm += 1
+    st.image(image, caption="Diseño sin fondo", use_column_width=True)
 
-    cantidad_disenos = st.number_input("¿Cuántos diseños necesitas?", min_value=1)
-    DTF_alto = 100  # cm
-    DTF_largo = 58  # cm
-
-    diseños_por_fila = int(DTF_largo // width_cm)
-    filas_por_metro = int(DTF_alto // height_cm)
-    total_diseños_por_metro = diseños_por_fila * filas_por_metro
-
-    metros_necesarios = cantidad_disenos / total_diseños_por_metro
-    metros_necesarios = np.ceil(metros_necesarios * 100) / 100  # redondear a 2 decimales
-
-    st.markdown(f"**Diseños por metro:** {total_diseños_por_metro}")
-    st.markdown(f"**Metros necesarios:** {metros_necesarios:.2f} m")
-
-    precio_metro = st.number_input("Precio por metro de DTF (MXN)", min_value=0.0)
-    costo_total = metros_necesarios * precio_metro
-    precio_unitario = costo_total / cantidad_disenos if cantidad_disenos else 0
-
-    st.markdown(f"**Costo total:** ${costo_total:.2f} MXN")
-    st.markdown(f"**Precio por diseño:** ${precio_unitario:.2f} MXN")
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    byte_im = buffer.getvalue()
+    st.download_button("Descargar imagen sin fondo", data=byte_im, file_name="diseño_sin_fondo.png", mime="image/png")
