@@ -64,7 +64,11 @@ if uploaded_file:
         height_cm = valor
         width_cm = round(height_cm * aspect_ratio, 2)
 
-    st.markdown(f"📐 Tamaño proporcional del diseño: **{width_cm} cm x {height_cm} cm**")
+    # Agregar 1 cm de margen en cada dirección
+    width_cm += 1
+    height_cm += 1
+
+    st.markdown(f"📐 Tamaño con márgenes incluidos: **{width_cm} cm x {height_cm} cm**")
 
     cantidad = st.number_input("🧾 ¿Cuántos diseños necesitas?", min_value=1, value=10, step=1)
 
