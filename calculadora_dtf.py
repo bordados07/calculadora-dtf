@@ -1,128 +1,73 @@
 
 import streamlit as st
-from PIL import Image
+from PIL import Image, ImageOps
 import numpy as np
 import cv2
-from streamlit_drawable_canvas import st_canvas
+from io import BytesIO
+import base64
 
 st.set_page_config(page_title="Calculadora DTF", layout="centered")
+st.markdown("""<h1 style='text-align: center; color: white;'>Calculadora de Metros de DTF</h1>""", unsafe_allow_html=True)
 
-# Estilo visual
-st.markdown(
-    """
-    <style>
-        .stApp {
-            background-color: #0c0c0c;
-            color: white;
-        }
-        .title {
-            text-align: center;
-            font-size: 36px;
-            color: #ffcc00;
-        }
-        .subtitle {
-            font-size: 20px;
-            margin-top: 20px;
-        }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+modo = st.radio("Selecciona el método para eliminar el fondo:", ["Automático (IA)", "Manual (seleccionar color)"])
 
-st.markdown("<div class='title'>🎨 Calculadora de DTF</div>", unsafe_allow_html=True)
-st.markdown("<div class='subtitle'>Sube tu diseño, elimina el fondo y calcula tus metros</div>", unsafe_allow_html=True)
-
-uploaded_file = st.file_uploader("📤 Sube tu diseño (PNG, JPG)", type=["png", "jpg", "jpeg"])
-
+uploaded_file = st.file_uploader("Sube tu diseño", type=["png", "jpg", "jpeg"])
 if uploaded_file:
-    image = Image.open(uploaded_file).convert("RGB")
-    np_img = np.array(image)
+    image = Image.open(uploaded_file).convert("RGBA")
+    img_np = np.array(image)
 
-    st.markdown("### 🧼 Selecciona el método para eliminar el fondo")
-    metodo = st.radio("Método de eliminación de fondo", ["Automático (blanco)", "Manual (seleccionar color)"])
-
-    if metodo == "Automático (blanco)":
-        hsv = cv2.cvtColor(np_img, cv2.COLOR_RGB2HSV)
-        lower_white = np.array([0, 0, 200])
-        upper_white = np.array([180, 40, 255])
-        mask = cv2.inRange(hsv, lower_white, upper_white)
-        no_bg = cv2.bitwise_and(np_img, np_img, mask=cv2.bitwise_not(mask))
+    if modo == "Automático (IA)":
+        gray = cv2.cvtColor(img_np, cv2.COLOR_RGBA2GRAY)
+        _, mask = cv2.threshold(gray, 250, 255, cv2.THRESH_BINARY)
+        img_np[mask == 255] = (0, 0, 0, 0)
     else:
-        st.markdown("Haz clic sobre el color que deseas eliminar:")
-        canvas_result = st_canvas(
-            fill_color="rgba(255, 255, 255, 0.0)",
-            stroke_width=1,
-            stroke_color="#000000",
-            background_image=image,
-            update_streamlit=True,
-            height=image.height,
-            width=image.width,
-            drawing_mode="point",
-            key="canvas",
-        )
+        st.write("Haz clic en el fondo que deseas eliminar (implementación simplificada)")
+        click_color = st.color_picker("Selecciona el color del fondo", "#FFFFFF")
+        click_rgb = tuple(int(click_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+        lower = np.array([c - 20 for c in click_rgb])
+        upper = np.array([c + 20 for c in click_rgb])
+        mask = cv2.inRange(img_np[:, :, :3], lower, upper)
+        img_np[mask > 0] = (0, 0, 0, 0)
 
-        no_bg = np_img.copy()
+    image_no_bg = Image.fromarray(img_np)
+    st.image(image_no_bg, caption="Diseño sin fondo", use_column_width=True)
 
-        if canvas_result.json_data and canvas_result.json_data["objects"]:
-            punto = canvas_result.json_data["objects"][-1]
-            px = int(punto["left"])
-            py = int(punto["top"])
-            color_bgr = no_bg[py, px][::-1]
-            color_hsv = cv2.cvtColor(np.uint8([[color_bgr]]), cv2.COLOR_BGR2HSV)[0][0]
+    dimension = st.radio("¿Qué dimensión quieres ingresar?", ["Ancho (cm)", "Alto (cm)"])
+    user_size = st.number_input(f"Ingrese el {dimension.lower()} del diseño en cm", min_value=1.0)
 
-            h, s, v = color_hsv
-            lower = np.array([max(h - 10, 0), 50, 50])
-            upper = np.array([min(h + 10, 179), 255, 255])
-            hsv = cv2.cvtColor(no_bg, cv2.COLOR_RGB2HSV)
-            mask = cv2.inRange(hsv, lower, upper)
-            no_bg = cv2.bitwise_and(no_bg, no_bg, mask=cv2.bitwise_not(mask))
+    width, height = image_no_bg.size
+    aspect_ratio = height / width
 
-    st.image(no_bg, caption="Diseño sin fondo", use_container_width=True)
-
-    # Proporción original
-    height_px, width_px = no_bg.shape[:2]
-    aspect_ratio = width_px / height_px
-
-    st.markdown("### 📏 Medidas del diseño")
-    col1, col2 = st.columns(2)
-    with col1:
-        input_mode = st.radio("¿Qué medida deseas ingresar?", ["Ancho (cm)", "Alto (cm)"])
-
-    with col2:
-        valor = st.number_input("Introduce el valor en cm", min_value=1.0, value=10.0, step=0.5)
-
-    if input_mode == "Ancho (cm)":
-        width_cm = valor
-        height_cm = round(width_cm / aspect_ratio, 2)
+    if dimension == "Ancho (cm)":
+        width_cm = user_size
+        height_cm = user_size * aspect_ratio
     else:
-        height_cm = valor
-        width_cm = round(height_cm * aspect_ratio, 2)
+        height_cm = user_size
+        width_cm = user_size / aspect_ratio
 
-    # Agregar margen
+    st.markdown(f"**Tamaño final del diseño (sin fondo, proporcional):** {width_cm:.2f}cm x {height_cm:.2f}cm")
+
+    # Agregar margen de separación de 1 cm
     width_cm += 1
     height_cm += 1
 
-    st.markdown(f"📐 Tamaño con márgenes incluidos: **{width_cm} cm x {height_cm} cm**")
+    cantidad_disenos = st.number_input("¿Cuántos diseños necesitas?", min_value=1)
+    DTF_alto = 100  # cm
+    DTF_largo = 58  # cm
 
-    cantidad = st.number_input("🧾 ¿Cuántos diseños necesitas?", min_value=1, value=10, step=1)
-    precio_metro = st.number_input("💸 Precio del metro de DTF (MXN)", min_value=1.0, value=80.0, step=1.0)
+    diseños_por_fila = int(DTF_largo // width_cm)
+    filas_por_metro = int(DTF_alto // height_cm)
+    total_diseños_por_metro = diseños_por_fila * filas_por_metro
 
-    # Área del rollo de DTF
-    rollo_alto = 100.0
-    rollo_ancho = 58.0
+    metros_necesarios = cantidad_disenos / total_diseños_por_metro
+    metros_necesarios = np.ceil(metros_necesarios * 100) / 100  # redondear a 2 decimales
 
-    diseños_x_fila = int(rollo_ancho // width_cm)
-    filas_por_metro = int(rollo_alto // height_cm)
-    diseños_por_metro = diseños_x_fila * filas_por_metro
+    st.markdown(f"**Diseños por metro:** {total_diseños_por_metro}")
+    st.markdown(f"**Metros necesarios:** {metros_necesarios:.2f} m")
 
-    if diseños_por_metro == 0:
-        st.error("❌ El diseño es demasiado grande para caber en un metro de DTF.")
-    else:
-        metros_necesarios = round(cantidad / diseños_por_metro, 2)
-        precio_unitario = round(precio_metro / diseños_por_metro, 2)
-        costo_total = round(metros_necesarios * precio_metro, 2)
+    precio_metro = st.number_input("Precio por metro de DTF (MXN)", min_value=0.0)
+    costo_total = metros_necesarios * precio_metro
+    precio_unitario = costo_total / cantidad_disenos if cantidad_disenos else 0
 
-        st.success(f"📦 En 1 metro caben {diseños_por_metro} diseños ({diseños_x_fila} por fila, {filas_por_metro} filas)")
-        st.info(f"🧮 Para {cantidad} diseños necesitas aproximadamente **{metros_necesarios} metros** de DTF.")
-        st.markdown(f"💲 **Precio por diseño:** ${precio_unitario} MXN")
-        st.markdown(f"💰 **Costo total del pedido:** ${costo_total} MXN")
+    st.markdown(f"**Costo total:** ${costo_total:.2f} MXN")
+    st.markdown(f"**Precio por diseño:** ${precio_unitario:.2f} MXN")
