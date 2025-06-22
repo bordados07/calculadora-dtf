@@ -3,6 +3,7 @@ import streamlit as st
 from PIL import Image
 import numpy as np
 import cv2
+from streamlit_drawable_canvas import st_canvas
 
 st.set_page_config(page_title="Calculadora DTF", layout="centered")
 
@@ -29,7 +30,7 @@ st.markdown(
 )
 
 st.markdown("<div class='title'>🎨 Calculadora de DTF</div>", unsafe_allow_html=True)
-st.markdown("<div class='subtitle'>Sube tu diseño y te diremos cuántos metros y cuánto cuesta tu DTF</div>", unsafe_allow_html=True)
+st.markdown("<div class='subtitle'>Sube tu diseño, elimina el fondo y calcula tus metros</div>", unsafe_allow_html=True)
 
 uploaded_file = st.file_uploader("📤 Sube tu diseño (PNG, JPG)", type=["png", "jpg", "jpeg"])
 
@@ -37,12 +38,45 @@ if uploaded_file:
     image = Image.open(uploaded_file).convert("RGB")
     np_img = np.array(image)
 
-    # Eliminar fondo blanco con HSV
-    hsv = cv2.cvtColor(np_img, cv2.COLOR_RGB2HSV)
-    lower_white = np.array([0, 0, 200])
-    upper_white = np.array([180, 40, 255])
-    mask = cv2.inRange(hsv, lower_white, upper_white)
-    no_bg = cv2.bitwise_and(np_img, np_img, mask=cv2.bitwise_not(mask))
+    st.markdown("### 🧼 Selecciona el método para eliminar el fondo")
+    metodo = st.radio("Método de eliminación de fondo", ["Automático (blanco)", "Manual (seleccionar color)"])
+
+    if metodo == "Automático (blanco)":
+        hsv = cv2.cvtColor(np_img, cv2.COLOR_RGB2HSV)
+        lower_white = np.array([0, 0, 200])
+        upper_white = np.array([180, 40, 255])
+        mask = cv2.inRange(hsv, lower_white, upper_white)
+        no_bg = cv2.bitwise_and(np_img, np_img, mask=cv2.bitwise_not(mask))
+    else:
+        st.markdown("Haz clic sobre el color que deseas eliminar:")
+        canvas_result = st_canvas(
+            fill_color="rgba(255, 255, 255, 0.0)",
+            stroke_width=1,
+            stroke_color="#000000",
+            background_image=image,
+            update_streamlit=True,
+            height=image.height,
+            width=image.width,
+            drawing_mode="point",
+            key="canvas",
+        )
+
+        no_bg = np_img.copy()
+
+        if canvas_result.json_data and canvas_result.json_data["objects"]:
+            punto = canvas_result.json_data["objects"][-1]
+            px = int(punto["left"])
+            py = int(punto["top"])
+            color_bgr = no_bg[py, px][::-1]
+            color_hsv = cv2.cvtColor(np.uint8([[color_bgr]]), cv2.COLOR_BGR2HSV)[0][0]
+
+            h, s, v = color_hsv
+            lower = np.array([max(h - 10, 0), 50, 50])
+            upper = np.array([min(h + 10, 179), 255, 255])
+            hsv = cv2.cvtColor(no_bg, cv2.COLOR_RGB2HSV)
+            mask = cv2.inRange(hsv, lower, upper)
+            no_bg = cv2.bitwise_and(no_bg, no_bg, mask=cv2.bitwise_not(mask))
+
     st.image(no_bg, caption="Diseño sin fondo", use_container_width=True)
 
     # Proporción original
@@ -64,7 +98,7 @@ if uploaded_file:
         height_cm = valor
         width_cm = round(height_cm * aspect_ratio, 2)
 
-    # Agregar 1 cm de margen en cada dirección
+    # Agregar margen
     width_cm += 1
     height_cm += 1
 
@@ -74,8 +108,8 @@ if uploaded_file:
     precio_metro = st.number_input("💸 Precio del metro de DTF (MXN)", min_value=1.0, value=80.0, step=1.0)
 
     # Área del rollo de DTF
-    rollo_alto = 100.0  # cm
-    rollo_ancho = 58.0  # cm
+    rollo_alto = 100.0
+    rollo_ancho = 58.0
 
     diseños_x_fila = int(rollo_ancho // width_cm)
     filas_por_metro = int(rollo_alto // height_cm)
