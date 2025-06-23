@@ -1,5 +1,17 @@
 
 import streamlit as st
+
+st.set_page_config(page_title="Calculadora DTF", layout="centered")
+
+# Verificación de acceso
+codigo_correcto = "GDL123"
+codigo_ingresado = st.text_input("🔒 Ingresa el código de acceso:", type="password")
+
+if codigo_ingresado != codigo_correcto:
+    st.warning("⚠️ Código incorrecto o vacío. Por favor, ingresa el código para continuar.")
+    st.stop()
+
+
 from PIL import Image
 import numpy as np
 import cv2
