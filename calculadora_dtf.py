@@ -1,4 +1,3 @@
-```python
 import streamlit as st
 from PIL import Image
 import numpy as np
@@ -32,14 +31,8 @@ if uploaded_file is not None:
 
     image_np = np.array(image)
 
-    # Imagen original
-    st.image(
-        image,
-        caption="🖼️ Imagen original",
-        width="stretch"
-    )
+    st.image(image, caption="🖼️ Imagen original", width="stretch")
 
-    # Activar/desactivar eliminación de fondo
     eliminar_fondo = st.checkbox(
         "Quitar fondo automáticamente",
         value=True
@@ -108,7 +101,6 @@ if uploaded_file is not None:
         f"📏 Medidas proporcionales del diseño: **{ancho_cm:.2f} cm x {alto_cm:.2f} cm**"
     )
 
-    # Margen de separación
     margen = 1
 
     ancho_total = ancho_cm + margen
@@ -120,7 +112,6 @@ if uploaded_file is not None:
         step=1
     )
 
-    # Medidas del metro DTF
     largo_dtf_cm = 58
     alto_dtf_cm = 100
 
@@ -166,4 +157,3 @@ st.markdown(
     "[Haz clic aquí para quitar el fondo manualmente](https://www.iloveimg.com/es/eliminar-fondo)",
     unsafe_allow_html=True
 )
-```
