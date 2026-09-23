@@ -21,13 +21,6 @@ if archivo is not None:
 
     img_np = np.array(image)
 
-    quitar_fondo = st.checkbox("Quitar fondo automáticamente", value=True)
-
-    if quitar_fondo:
-        gray = cv2.cvtColor(img_np, cv2.COLOR_RGBA2GRAY)
-        _, alpha = cv2.threshold(gray, 250, 255, cv2.THRESH_BINARY_INV)
-        img_np[:, :, 3] = alpha
-
     alpha = img_np[:, :, 3]
     coords = cv2.findNonZero(alpha)
 
