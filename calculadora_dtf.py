@@ -83,7 +83,7 @@ if archivo is not None:
 
     st.success(f"Orientación óptima: {nombre}")
     st.write(f"Diseños por ANCHO: {por_fila}")
-st.write(f"Diseños por ALTO: {filas}")
+    st.write(f"Diseños por ALTO: {filas}")
     st.write(f"Total por metro: {total}")
 
     metros = cantidad / total if total else 0
