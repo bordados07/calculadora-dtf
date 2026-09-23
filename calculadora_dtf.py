@@ -4,12 +4,12 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 
-st.set_page_config(page_title="Calculadora DTF PRO MAX 4K HD ", layout="centered")
+st.set_page_config(page_title="Calculadora DTF PRO", layout="centered")
 
 ANCHO_ROLLO = 58.0
 LARGO_METRO = 100.0
 
-st.title("📦 Calculadora DTF PRO")
+st.title("📦 Calculadora DTF PRO MAX 4K HD")
 st.write("Recorte automático, rotación inteligente, validación y vista previa de acomodo.")
 
 archivo = st.file_uploader("Sube una imagen", type=["png", "jpg", "jpeg"])
