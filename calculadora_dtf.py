@@ -21,18 +21,13 @@ if archivo is not None:
 
     img_np = np.array(image)
 
-    alpha = img_np[:, :, 3]
-    coords = cv2.findNonZero(alpha)
+    st.image(
+        image,
+        caption="Vista previa del diseño",
+        width="stretch"
+    )
 
-    if coords is None:
-        st.error("No se detectó contenido en la imagen.")
-        st.stop()
-
-    x, y, w, h = cv2.boundingRect(coords)
-    recorte = img_np[y:y+h, x:x+w]
-
-    st.image(Image.fromarray(recorte), caption="Diseño recortado automáticamente", width="stretch")
-
+    w, h = image.size
     aspect_ratio = w / h
 
     modo = st.radio("Medida a ingresar", ["Ancho (cm)", "Alto (cm)"])
@@ -58,7 +53,7 @@ if archivo is not None:
         ["Automática", "Horizontal", "Vertical"]
     )
 
-    logo_base = Image.fromarray(recorte)
+    logo_base = image
 
     if orientacion_usuario == "Horizontal":
         opciones = [("Horizontal", ancho_cm + margen, alto_cm + margen)]
