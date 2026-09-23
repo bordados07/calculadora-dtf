@@ -3,6 +3,7 @@ from PIL import Image
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
+from streamlit_paste_button import paste_image_button
 
 st.set_page_config(page_title="Calculadora DTF PRO", layout="centered")
 
@@ -12,11 +13,19 @@ LARGO_METRO = 100.0
 st.title("📦 Calculadora DTF PRO")
 st.write("Recorte automático, rotación inteligente, validación y vista previa de acomodo.")
 
-archivo = st.file_uploader("Sube una imagen", type=["png", "jpg", "jpeg"])
+st.subheader("Imagen")
+
+archivo = st.file_uploader("📁 Selecciona una imagen", type=["png", "jpg", "jpeg"])
+imagen_pegada = paste_image_button(label="📋 Pegar imagen (Ctrl + V)")
+
+image = None
 
 if archivo is not None:
-
     image = Image.open(archivo).convert("RGBA")
+elif getattr(imagen_pegada, "image_data", None) is not None:
+    image = Image.fromarray(imagen_pegada.image_data).convert("RGBA")
+
+if image is not None:
     st.image(image, caption="Imagen original", width="stretch")
 
     img_np = np.array(image)
