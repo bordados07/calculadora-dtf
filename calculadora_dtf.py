@@ -3,8 +3,6 @@ from PIL import Image
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
-from streamlit_paste_button import paste_image_button
-from io import BytesIO
 
 st.set_page_config(page_title="Calculadora DTF PRO", layout="centered")
 
@@ -14,33 +12,12 @@ LARGO_METRO = 100.0
 st.title("📦 Calculadora DTF PRO")
 st.write("Recorte automático, rotación inteligente, validación y vista previa de acomodo.")
 
-st.subheader("Imagen")
-
-archivo = st.file_uploader("📁 Selecciona una imagen", type=["png", "jpg", "jpeg"])
-imagen_pegada = paste_image_button(label="📋 Pegar imagen (Ctrl + V)")
-
-image = None
+archivo = st.file_uploader("Sube una imagen", type=["png", "jpg", "jpeg"])
 
 if archivo is not None:
+
     image = Image.open(archivo).convert("RGBA")
-
-elif hasattr(imagen_pegada, "image_data") and imagen_pegada.image_data is not None:
-
-    datos = imagen_pegada.image_data
-
-    try:
-        if isinstance(datos, np.ndarray):
-            image = Image.fromarray(datos).convert("RGBA")
-        else:
-            image = Image.open(BytesIO(datos)).convert("RGBA")
-    except Exception:
-        st.error("No se pudo leer la imagen pegada. Intenta subirla como archivo.")
-        st.stop()
-
-if image is not None:
-
     st.image(image, caption="Imagen original", width="stretch")
-
 
     img_np = np.array(image)
 
