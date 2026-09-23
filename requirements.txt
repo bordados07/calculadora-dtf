@@ -4,3 +4,4 @@ Pillow
 numpy
 streamlit-drawable-canvas
 matplotlib
+streamlit-paste-button
