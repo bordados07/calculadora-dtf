@@ -54,10 +54,27 @@ if archivo is not None:
     margen = st.number_input("Margen entre diseños (cm)", 0.0, 5.0, 1.0)
     cantidad = st.number_input("Cantidad de diseños", 1, 100000, 100)
 
-    opciones = [
-        ("Normal", ancho_cm + margen, alto_cm + margen),
-        ("Girada 90°", alto_cm + margen, ancho_cm + margen)
-    ]
+    orientacion_usuario = st.radio(
+        "Orientación del diseño",
+        ["Automática", "Horizontal", "Vertical"]
+    )
+
+    logo_base = Image.fromarray(recorte)
+
+    if orientacion_usuario == "Horizontal":
+        opciones = [("Horizontal", ancho_cm + margen, alto_cm + margen)]
+        logo_vista = logo_base
+
+    elif orientacion_usuario == "Vertical":
+        opciones = [("Vertical", alto_cm + margen, ancho_cm + margen)]
+        logo_vista = logo_base.rotate(90, expand=True)
+
+    else:
+        opciones = [
+            ("Horizontal", ancho_cm + margen, alto_cm + margen),
+            ("Vertical", alto_cm + margen, ancho_cm + margen)
+        ]
+        logo_vista = None
 
     mejor = None
     mejor_total = -1
@@ -81,7 +98,13 @@ if archivo is not None:
 
     nombre, ancho_u, alto_u, por_fila, filas, total = mejor
 
-    st.success(f"Orientación óptima: {nombre}")
+    if orientacion_usuario == "Automática":
+        if nombre == "Vertical":
+            logo_vista = logo_base.rotate(90, expand=True)
+        else:
+            logo_vista = logo_base
+
+    st.success(f"Orientación utilizada: {nombre}")
     st.write(f"Diseños por ANCHO: {por_fila}")
     st.write(f"Diseños por ALTO: {filas}")
     st.write(f"Total por metro: {total}")
@@ -102,7 +125,7 @@ if archivo is not None:
 
     st.subheader("Vista previa de acomodo")
 
-    logo = Image.fromarray(recorte)
+    logo = logo_vista
 
     disenos_por_metro = total
     metros_vista = math.ceil(cantidad / disenos_por_metro)
