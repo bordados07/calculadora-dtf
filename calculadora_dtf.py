@@ -2,158 +2,112 @@ import streamlit as st
 from PIL import Image
 import numpy as np
 import cv2
+import matplotlib.pyplot as plt
 
-st.set_page_config(page_title="Calculadora DTF", layout="centered")
+st.set_page_config(page_title="Calculadora DTF PRO", layout="centered")
 
-st.markdown(
-    "<h1 style='text-align: center; color: white;'>Calculadora de Metros de DTF</h1>",
-    unsafe_allow_html=True
-)
+ANCHO_ROLLO = 58.0
+LARGO_METRO = 100.0
 
-st.markdown(
-    "<p style='text-align: center; color: gray;'>Sube tu diseño, elimina el fondo automáticamente y calcula el costo y metros de impresión en DTF.</p>",
-    unsafe_allow_html=True
-)
+st.title("📦 Calculadora DTF PRO")
+st.write("Recorte automático, rotación inteligente, validación y vista previa de acomodo.")
 
-st.markdown("<hr>", unsafe_allow_html=True)
+archivo = st.file_uploader("Sube una imagen", type=["png", "jpg", "jpeg"])
 
-uploaded_file = st.file_uploader(
-    "📤 Sube tu imagen",
-    type=["png", "jpg", "jpeg"]
-)
+if archivo is not None:
 
-if uploaded_file is not None:
+    image = Image.open(archivo).convert("RGBA")
+    st.image(image, caption="Imagen original", width="stretch")
 
-    image = Image.open(uploaded_file).convert("RGBA")
+    img_np = np.array(image)
 
-    original_width, original_height = image.size
-    aspect_ratio = original_width / original_height
+    quitar_fondo = st.checkbox("Quitar fondo automáticamente", value=True)
 
-    image_np = np.array(image)
+    if quitar_fondo:
+        gray = cv2.cvtColor(img_np, cv2.COLOR_RGBA2GRAY)
+        _, alpha = cv2.threshold(gray, 250, 255, cv2.THRESH_BINARY_INV)
+        img_np[:, :, 3] = alpha
 
-    st.image(image, caption="🖼️ Imagen original", width="stretch")
+    alpha = img_np[:, :, 3]
+    coords = cv2.findNonZero(alpha)
 
-    eliminar_fondo = st.checkbox(
-        "Quitar fondo automáticamente",
-        value=True
-    )
+    if coords is None:
+        st.error("No se detectó contenido en la imagen.")
+        st.stop()
 
-    if eliminar_fondo:
+    x, y, w, h = cv2.boundingRect(coords)
+    recorte = img_np[y:y+h, x:x+w]
 
-        image_gray = cv2.cvtColor(
-            image_np,
-            cv2.COLOR_RGBA2GRAY
-        )
+    st.image(Image.fromarray(recorte), caption="Diseño recortado automáticamente", width="stretch")
 
-        _, alpha = cv2.threshold(
-            image_gray,
-            250,
-            255,
-            cv2.THRESH_BINARY_INV
-        )
+    aspect_ratio = w / h
 
-        image_np[:, :, 3] = alpha
-
-        image_sin_fondo = Image.fromarray(image_np)
-
-        st.image(
-            image_sin_fondo,
-            caption="🧽 Fondo eliminado automáticamente",
-            width="stretch"
-        )
-
-    else:
-
-        st.image(
-            image,
-            caption="🖼️ Imagen sin modificar",
-            width="stretch"
-        )
-
-    st.markdown("### ✏️ Define una medida del diseño")
-
-    modo = st.radio(
-        "¿Qué medida deseas ingresar?",
-        ["Ancho (cm)", "Alto (cm)"]
-    )
+    modo = st.radio("Medida a ingresar", ["Ancho (cm)", "Alto (cm)"])
 
     if modo == "Ancho (cm)":
-
-        ancho_cm = st.number_input(
-            "Ancho (cm)",
-            min_value=1.0,
-            value=10.0
-        )
-
+        ancho_cm = st.number_input("Ancho", min_value=1.0, value=10.0)
         alto_cm = ancho_cm / aspect_ratio
-
     else:
-
-        alto_cm = st.number_input(
-            "Alto (cm)",
-            min_value=1.0,
-            value=10.0
-        )
-
+        alto_cm = st.number_input("Alto", min_value=1.0, value=10.0)
         ancho_cm = alto_cm * aspect_ratio
 
-    st.markdown(
-        f"📏 Medidas proporcionales del diseño: **{ancho_cm:.2f} cm x {alto_cm:.2f} cm**"
-    )
+    margen = st.number_input("Margen entre diseños (cm)", 0.0, 5.0, 1.0)
+    cantidad = st.number_input("Cantidad de diseños", 1, 100000, 100)
 
-    margen = 1
+    opciones = [
+        ("Normal", ancho_cm + margen, alto_cm + margen),
+        ("Girada 90°", alto_cm + margen, ancho_cm + margen)
+    ]
 
-    ancho_total = ancho_cm + margen
-    alto_total = alto_cm + margen
+    mejor = None
+    mejor_total = -1
 
-    cantidad = st.number_input(
-        "🎨 ¿Cuántos diseños necesitas?",
-        min_value=1,
-        step=1
-    )
+    for nombre, ancho, alto in opciones:
 
-    largo_dtf_cm = 58
-    alto_dtf_cm = 100
+        if ancho > ANCHO_ROLLO:
+            continue
 
-    diseños_por_fila = int(largo_dtf_cm // ancho_total)
-    filas_por_metro = int(alto_dtf_cm // alto_total)
+        por_fila = int(ANCHO_ROLLO // ancho)
+        filas = int(LARGO_METRO // alto)
+        total = por_fila * filas
 
-    total_por_metro = diseños_por_fila * filas_por_metro
+        if total > mejor_total:
+            mejor_total = total
+            mejor = (nombre, ancho, alto, por_fila, filas, total)
 
-    if total_por_metro > 0:
-        metros_necesarios = cantidad / total_por_metro
-    else:
-        metros_necesarios = 0
+    if mejor is None:
+        st.error("El diseño no cabe en el rollo de 58 cm.")
+        st.stop()
 
-    st.markdown(f"🧾 **Diseños por metro:** {total_por_metro}")
-    st.markdown(f"📐 **Metros de DTF necesarios:** {metros_necesarios:.2f}")
+    nombre, ancho_u, alto_u, por_fila, filas, total = mejor
 
-    st.markdown("### 💰 Costo del DTF")
+    st.success(f"Orientación óptima: {nombre}")
+    st.write(f"Diseños por fila: {por_fila}")
+    st.write(f"Filas por metro: {filas}")
+    st.write(f"Total por metro: {total}")
 
-    precio_metro = st.number_input(
-        "Precio por metro (MXN)",
-        min_value=0.0,
-        value=100.0
-    )
+    metros = cantidad / total if total else 0
 
-    if metros_necesarios > 0:
+    st.write(f"Metros necesarios: {metros:.2f}")
 
-        total = metros_necesarios * precio_metro
-        precio_unitario = total / cantidad
+    precio_metro = st.number_input("Precio por metro (MXN)", min_value=0.0, value=100.0)
 
-        st.success(
-            f"💸 Precio total: ${total:.2f} MXN"
-        )
+    costo_total = metros * precio_metro
+    costo_unitario = costo_total / cantidad
 
-        st.info(
-            f"🧾 Precio por diseño: ${precio_unitario:.2f} MXN"
-        )
+    st.success(f"Costo total: ${costo_total:.2f} MXN")
+    st.info(f"Costo por diseño: ${costo_unitario:.4f} MXN")
 
-st.markdown("---")
+    st.subheader("Vista previa de acomodo")
 
-st.markdown("### ¿Duda con la eliminación de fondo?")
+    fig, ax = plt.subplots(figsize=(6, 10))
+    ax.set_xlim(0, ANCHO_ROLLO)
+    ax.set_ylim(0, LARGO_METRO)
 
-st.markdown(
-    "[Haz clic aquí para quitar el fondo manualmente](https://www.iloveimg.com/es/eliminar-fondo)",
-    unsafe_allow_html=True
-)
+    for f in range(filas):
+        for c in range(por_fila):
+            rect = plt.Rectangle((c * ancho_u, f * alto_u), ancho_u, alto_u, fill=False)
+            ax.add_patch(rect)
+
+    ax.set_aspect("equal")
+    st.pyplot(fig)
