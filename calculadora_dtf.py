@@ -9,7 +9,7 @@ st.set_page_config(page_title="Calculadora DTF PRO", layout="centered")
 ANCHO_ROLLO = 58.0
 LARGO_METRO = 100.0
 
-st.title("📦 Calculadora DTF PRO MAX 4K HD")
+st.title("📦 Calculadora DTF PRO")
 st.write("Recorte automático, rotación inteligente, validación y vista previa de acomodo.")
 
 archivo = st.file_uploader("Sube una imagen", type=["png", "jpg", "jpeg"])
@@ -117,11 +117,16 @@ if archivo is not None:
 
     metros = cantidad / total if total else 0
 
-    st.write(f"Metros necesarios: {metros:.2f}")
+    import math
+
+    metros_cobrados = math.ceil(metros * 2) / 2
+
+    st.write(f"Metros necesarios reales: {metros:.2f}")
+    st.write(f"Metros cobrados: {metros_cobrados:.1f}")
 
     precio_metro = st.number_input("Precio por metro (MXN)", min_value=0.0, value=100.0)
 
-    costo_total = metros * precio_metro
+    costo_total = metros_cobrados * precio_metro
     costo_unitario = costo_total / cantidad
 
     st.success(f"Costo total: ${costo_total:.2f} MXN")
