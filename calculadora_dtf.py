@@ -98,7 +98,11 @@ if archivo is not None:
     st.success(f"Costo total: ${costo_total:.2f} MXN")
     st.info(f"Costo por diseño: ${costo_unitario:.4f} MXN")
     
-    st.subheader("Vista previa de acomodo")
+    total = por_fila * filas
+    
+    import math
+
+st.subheader("Vista previa de acomodo")
 
 disenos_por_metro = total
 metros_vista = math.ceil(cantidad / disenos_por_metro)
