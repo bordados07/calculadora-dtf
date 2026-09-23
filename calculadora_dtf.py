@@ -98,16 +98,68 @@ if archivo is not None:
     st.success(f"Costo total: ${costo_total:.2f} MXN")
     st.info(f"Costo por diseño: ${costo_unitario:.4f} MXN")
 
-    st.subheader("Vista previa de acomodo")
+    import math
+
+st.subheader("Vista previa de acomodo")
+
+disenos_por_metro = total
+metros_vista = math.ceil(cantidad / disenos_por_metro)
+
+logo = Image.fromarray(recorte)
+
+for pagina in range(metros_vista):
+
+    restantes = cantidad - (pagina * disenos_por_metro)
+
+    mostrar = min(
+        disenos_por_metro,
+        restantes
+    )
+
+    st.markdown(f"### Metro {pagina+1}")
 
     fig, ax = plt.subplots(figsize=(6, 10))
+
     ax.set_xlim(0, ANCHO_ROLLO)
     ax.set_ylim(0, LARGO_METRO)
 
-    for f in range(filas):
-        for c in range(por_fila):
-            rect = plt.Rectangle((c * ancho_u, f * alto_u), ancho_u, alto_u, fill=False)
-            ax.add_patch(rect)
+    contador = 0
+
+    for fila in range(filas):
+
+        for columna in range(por_fila):
+
+            if contador >= mostrar:
+                break
+
+            x0 = columna * ancho_u
+            y0 = fila * alto_u
+
+            ax.imshow(
+                logo,
+                extent=[
+                    x0,
+                    x0 + ancho_u,
+                    y0,
+                    y0 + alto_u
+                ]
+            )
+
+            ax.plot(
+                [x0, x0 + ancho_u, x0 + ancho_u, x0, x0],
+                [y0, y0, y0 + alto_u, y0 + alto_u, y0],
+                linewidth=0.5
+            )
+
+            contador += 1
+
+        if contador >= mostrar:
+            break
+
+    ax.set_title(
+        f"{mostrar} diseños de {cantidad}"
+    )
 
     ax.set_aspect("equal")
+
     st.pyplot(fig)
