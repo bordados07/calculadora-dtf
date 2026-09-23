@@ -4,7 +4,7 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 
-st.set_page_config(page_title="Calculadora DTF PRO", layout="centered")
+st.set_page_config(page_title="Calculadora DTF PRO MAX 4K HD ", layout="centered")
 
 ANCHO_ROLLO = 58.0
 LARGO_METRO = 100.0
@@ -51,7 +51,13 @@ if archivo is not None:
         alto_cm = st.number_input("Alto", min_value=1.0, value=10.0)
         ancho_cm = alto_cm * aspect_ratio
 
-    margen = st.number_input("Margen entre diseños (cm)", 0.0, 5.0, 1.0)
+    margen = st.number_input(
+        "Margen entre diseños (cm)",
+        min_value=0.0,
+        max_value=15.0,
+        value=1.0,
+        step=0.1
+    )
     cantidad = st.number_input("Cantidad de diseños", 1, 100000, 100)
 
     orientacion_usuario = st.radio(
@@ -153,9 +159,27 @@ if archivo is not None:
                 x0 = columna * ancho_u
                 y0 = fila * alto_u
 
+                logo_ancho = max(ancho_u - margen, 0.1)
+                logo_alto = max(alto_u - margen, 0.1)
+
                 ax.imshow(
                     logo,
-                    extent=[x0, x0 + ancho_u, y0, y0 + alto_u]
+                    extent=[
+                        x0,
+                        x0 + logo_ancho,
+                        y0,
+                        y0 + logo_alto
+                    ]
+                )
+
+                ax.add_patch(
+                    plt.Rectangle(
+                        (x0, y0),
+                        ancho_u,
+                        alto_u,
+                        fill=False,
+                        linewidth=1
+                    )
                 )
 
                 contador += 1
